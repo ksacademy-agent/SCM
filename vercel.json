@@ -1,6 +1,6 @@
 {
   "builds": [
-    { "src": "mes.py", "use": "@vercel/python" }
+    { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "api/index.py" },
