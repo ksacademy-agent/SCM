@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vercel 환경에 맞춘 동적 경로 설정
+# 파일들이 같은 api/ 폴더 안에 있으므로 경로가 안전하게 매핑됩니다.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MES_FILE = os.path.join(BASE_DIR, "mes_data.csv")
 ERP_FILE = os.path.join(BASE_DIR, "erp_data.csv")
