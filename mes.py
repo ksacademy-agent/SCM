@@ -12,8 +12,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MES_FILE = r"C:\Users\김대경\Desktop\시스템데모\mes_data.csv"
-ERP_FILE = r"C:\Users\김대경\Desktop\시스템데모\erp_data.csv"
+MES_FILE = "mes_data.csv"
+ERP_FILE = "erp_data.csv"
 
 # 가상의 사용자 데이터 및 토큰
 ADMIN_USER = {"id": "admin", "pw": "1234"}
