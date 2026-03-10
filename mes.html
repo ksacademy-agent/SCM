@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise AI Agent Demo</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        /* 로그인 섹션 */
+        #login-section { display: flex; justify-content: center; align-items: center; height: 100%; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .login-box h2 { color: #003366; margin-bottom: 25px; }
+        .login-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background: #003366; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 15px; }
+
+        /* 메인 시스템 섹션 */
+        #system-section { display: none; padding: 20px; flex-grow: 1; overflow-y: auto; }
+        .header { background: #003366; color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .container { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 650px; display: flex; flex-direction: column; }
+        
+        /* 테이블 스타일 */
+        .table-wrapper { flex-grow: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+        th { position: sticky; top: 0; background: #f8f9fa; z-index: 10; border-bottom: 2px solid #dee2e6; padding: 12px 10px; text-align: left; }
+        td { border-bottom: 1px solid #eee; padding: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tr:hover { background: #f1f5ff; cursor: pointer; }
+
+        /* 페이지네이션 */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 5px; padding-top: 15px; }
+        .pagination button { padding: 6px 12px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; font-size: 12px; }
+        .pagination button.active { background: #003366; color: white; border-color: #003366; font-weight: bold; }
+        .pagination button:disabled { background: #f8f9fa; color: #ccc; cursor: not-allowed; }
+        
+        .bad { color: #d9534f; font-weight: bold; }
+        .total-info { font-size: 13px; color: #666; margin-bottom: 10px; font-weight: bold; }
+        mark { background-color: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-section">
+        <div class="login-box">
+            <h2>Enterprise Login</h2>
+            <input type="text" id="username" placeholder="아이디 (admin)">
+            <input type="password" id="password" placeholder="비밀번호 (1234)">
+            <button onclick="handleLogin()">시스템 접속</button>
+        </div>
+    </div>
+
+    <div id="system-section">
+        <div class="header">
+            <h1>실시간 수율 분석 시스템 (MES & ERP)</h1>
+            <button onclick="location.reload()" style="background:transparent; color:white; border:1px solid white; cursor:pointer; padding:5px 15px; border-radius:4px;">로그아웃</button>
+        </div>
+        <div class="container">
+            <div class="card">
+                <div class="total-info">📊 실시간 생산 데이터: 총 <span id="total-rows">0</span>건</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th width="25%">생산일시</th><th width="25%">Lot No</th><th width="15%">설비</th><th width="15%">온도</th><th width="20%">수율</th></tr>
+                        </thead>
+                        <tbody id="mes-list"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+            
+            <div class="card" style="height: auto; min-height: 400px;">
+                <h3>🔍 ERP 원자재 이력 추적</h3>
+                <div id="erp-detail">
+                    <p style="color:#999; text-align: center; margin-top: 50px;">좌측 리스트에서 분석할 Lot을 선택하세요.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userToken = "";
+        let allData = [];
+        const rowsPerPage = 10;
+        let currentPage = 1;
+        const pageGroupSize = 10; 
+
+        async function handleLogin() {
+            const id = document.getElementById('username').value;
+            const pw = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch('http://127.0.0.1:8000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: id, password: pw })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    userToken = data.token;
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('system-section').style.display = 'block';
+                    fetchData();
+                } else {
+                    alert("인증에 실패했습니다. 아이디와 비밀번호를 확인하세요.");
+                }
+            } catch (e) {
+                alert("서버 연결에 실패했습니다. 파이썬 서버가 실행 중인지 확인하세요.");
+            }
+        }
+
+        async function fetchData() {
+            const res = await fetch('http://127.0.0.1:8000/api/mes/all', {
+                headers: { 'Authorization': `Bearer ${userToken}` }
+            });
+            allData = await res.json();
+            document.getElementById('total-rows').innerText = allData.length;
+            renderPage();
+        }
+
+        function renderPage() {
+            const start = (currentPage - 1) * rowsPerPage;
+            const pageData = allData.slice(start, start + rowsPerPage);
+            
+            const body = document.getElementById('mes-list');
+            body.innerHTML = pageData.map(row => `
+                <tr onclick="loadERP('${row['로트번호(Lot No)']}')">
+                    <td>${row['생산일시']}</td>
+                    <td><b>${row['로트번호(Lot No)']}</b></td>
+                    <td>${row['기계ID']}</td>
+                    <td>${row['챔버온도(C)']}°C</td>
+                    <td class="${row['수율(%)'] < 95 ? 'bad' : ''}">${row['수율(%)']}%</td>
+                </tr>
+            `).join('');
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const totalPages = Math.ceil(allData.length / rowsPerPage);
+            const currentGroup = Math.ceil(currentPage / pageGroupSize);
+            const startPage = (currentGroup - 1) * pageGroupSize + 1;
+            const endPage = Math.min(startPage + pageGroupSize - 1, totalPages);
+            
+            const nav = document.getElementById('pagination');
+            nav.innerHTML = '';
+
+            // [이전] 버튼
+            const prevBtn = document.createElement('button');
+            prevBtn.innerText = "이전";
+            prevBtn.disabled = currentGroup === 1;
+            prevBtn.onclick = () => {
+                currentPage = startPage - 1;
+                renderPage();
+            };
+            nav.appendChild(prevBtn);
+
+            // 페이지 번호 (1~10, 11~20...)
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.innerText = i;
+                if (i === currentPage) btn.className = 'active';
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderPage();
+                };
+                nav.appendChild(btn);
+            }
+
+            // [다음] 버튼
+            const nextBtn = document.createElement('button');
+            nextBtn.innerText = "다음";
+            nextBtn.disabled = endPage === totalPages;
+            nextBtn.onclick = () => {
+                currentPage = endPage + 1;
+                renderPage();
+            };
+            nav.appendChild(nextBtn);
+        }
+
+        async function loadERP(lotNo) {
+            const res = await fetch(`http://127.0.0.1:8000/api/erp/trace/${lotNo}`, {
+                headers: { 'Authorization': `Bearer ${userToken}` }
+            });
+            const data = await res.json();
+            const detail = document.getElementById('erp-detail');
+            detail.innerHTML = data.map(row => `
+                <div style="background:#f0f4f8; padding:20px; border-radius:8px; margin-top:10px; border-left:5px solid #003366;">
+                    <h3 style="margin-top:0;">분석 대상: ${row['로트번호(Lot No)']}</h3>
+                    <p><b>원자재명:</b> ${row['원자재명']} (${row['원자재코드']})</p>
+                    <p><b>공급사:</b> <mark>${row['공급사']}</mark></p>
+                    <p><b>원자재 Lot No:</b> ${row['원자재_Lot_No']}</p>
+                    <p><b>입고일자:</b> ${row['입고일자']}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
