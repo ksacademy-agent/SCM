@@ -1,18 +1,6 @@
 {
-  "builds": [
-    {
-      "src": "mes.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "mes.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "mes.html"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "mes.py" },
+    { "source": "/(.*)", "destination": "index.html" }
   ]
 }
