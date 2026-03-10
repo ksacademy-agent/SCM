@@ -87,7 +87,8 @@
             const pw = document.getElementById('password').value;
             
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/login', {
+                // [수정] http://127.0.0.1:8000 제거 -> 상대 경로 사용
+                const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: id, password: pw })
@@ -103,12 +104,13 @@
                     alert("인증에 실패했습니다. 아이디와 비밀번호를 확인하세요.");
                 }
             } catch (e) {
-                alert("서버 연결에 실패했습니다. 파이썬 서버가 실행 중인지 확인하세요.");
+                alert("서버 연결에 실패했습니다. 시스템 상태를 확인해 주세요.");
             }
         }
 
         async function fetchData() {
-            const res = await fetch('http://127.0.0.1:8000/api/mes/all', {
+            // [수정] 상대 경로 사용
+            const res = await fetch('/api/mes/all', {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
             allData = await res.json();
@@ -142,7 +144,6 @@
             const nav = document.getElementById('pagination');
             nav.innerHTML = '';
 
-            // [이전] 버튼
             const prevBtn = document.createElement('button');
             prevBtn.innerText = "이전";
             prevBtn.disabled = currentGroup === 1;
@@ -152,7 +153,6 @@
             };
             nav.appendChild(prevBtn);
 
-            // 페이지 번호 (1~10, 11~20...)
             for (let i = startPage; i <= endPage; i++) {
                 const btn = document.createElement('button');
                 btn.innerText = i;
@@ -164,7 +164,6 @@
                 nav.appendChild(btn);
             }
 
-            // [다음] 버튼
             const nextBtn = document.createElement('button');
             nextBtn.innerText = "다음";
             nextBtn.disabled = endPage === totalPages;
@@ -176,7 +175,8 @@
         }
 
         async function loadERP(lotNo) {
-            const res = await fetch(`http://127.0.0.1:8000/api/erp/trace/${lotNo}`, {
+            // [수정] 상대 경로 사용
+            const res = await fetch(`/api/erp/trace/${lotNo}`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
             const data = await res.json();
